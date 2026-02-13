@@ -56,7 +56,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // 常量部分
             const translation = new Map([
                 ['sister-dilei', '地雷妹'],
                 ['sister-high', '高好感度(70+)'],
@@ -72,155 +71,212 @@
                 ['mes_example', '对话示例'],
                 ['scenario', '场景'],
                 ['creator_notes', '创作者备注'],
-                ['tags', '标签']
+                ['tags', '标签'],
+                ['timestamp', '时间戳'],
+                ['date', '日期'],
+                ['time', '时间'],
+                ['affection', '好感'],
+                ['content', '内容'],
+                ['mode', '模式']
             ]);
-            const fileInput = document.getElementById('fileInput');             // 文件输入元素
-            const fileNameDisplay = document.getElementById('fileName');       // 文件名显示元素
-            const personSelector = document.getElementById('personSelector');   // 人设选择器
-            const editorSections = document.getElementById('editorSections');   // 编辑区域容器
-            const editorSection = {};   // 编辑区域元素组
 
-            let saveObj = null;   // 存档对象
-            let saveObj_original = null; // 原始存档对象备份
+            const fileInput = document.getElementById('fileInput');
+            const fileNameDisplay = document.getElementById('fileName');
+            const personSelector = document.getElementById('personSelector');
+            const editorSections = document.getElementById('editorSections');
+            const selectorSection = document.getElementById('selectorSection');
+            const emptyState = document.getElementById('emptyState');
+            const saveButton = document.getElementById('saveButton');
+            const resetButton = document.getElementById('resetButton');
 
-            // 显示状态消息
+            const editorSection = {};
+            let saveObj = null;
+            let saveObjOriginal = null;
+
             function showStatusMessage(message, type) {
                 const statusMessage = document.getElementById('statusMessage');
                 statusMessage.textContent = message;
                 statusMessage.className = 'status-message ' + type;
                 statusMessage.style.display = 'block';
-
-                // 3秒后自动隐藏成功消息
                 if (type === 'success') {
                     setTimeout(hideStatusMessage, 3000);
                 }
             }
 
-            // 隐藏状态消息
             function hideStatusMessage() {
                 const statusMessage = document.getElementById('statusMessage');
                 statusMessage.style.display = 'none';
             }
 
-            // 填充下拉框选择器
-            const populatePersonSelector = (saveObj) => {
-                const personSelector = document.getElementById('personSelector');
-                const selectorSection = document.getElementById('selectorSection');
-                // 清空选择器
-                personSelector.innerHTML = '<option id="tempOption" value="">-- 请选择一个人设进行编辑 --</option>';
+            function clearEditorState() {
+                Object.keys(editorSection).forEach(key => delete editorSection[key]);
+                editorSections.innerHTML = '';
+                personSelector.innerHTML = '<option value="">-- 请选择一个人设进行编辑 --</option>';
+                selectorSection.style.display = 'none';
+            }
 
-                // 添加选项及编辑列表
-                Object.keys(saveObj.data.prompts).forEach(prompt => {
-                    // 创建添加选项
-                    const option = document.createElement('option');
-                    option.value = translation.get(prompt) || prompt;
-                    option.textContent = option.value;
-                    personSelector.appendChild(option);
-                    selectorSection.style.display = 'block';
-                    // 创建添加编辑区域组容器(先隐藏)
-                    editorSection[prompt] = {};
-                    editorSection[prompt]['mainContainer'] = document.createElement('div');
-                    editorSection[prompt]['mainContainer'].className = 'editor-section';
-                    editorSection[prompt]['mainContainer'].style.display = 'none';
-                    editorSections.appendChild(editorSection[prompt]['mainContainer']);
+            function getType(value) {
+                if (Array.isArray(value)) return 'array';
+                if (value === null) return 'null';
+                return typeof value;
+            }
 
-                    const sectionHeading = document.createElement('div');
-                    sectionHeading.className = 'section-heading';
-                    sectionHeading.textContent = translation.get(prompt) || prompt;
-                    editorSection[prompt]['mainContainer'].appendChild(sectionHeading);
+            function parseValue(rawValue, type) {
+                if (type === 'number') {
+                    const parsed = Number(rawValue);
+                    if (Number.isNaN(parsed)) {
+                        throw new Error('数字字段填写无效: ' + rawValue);
+                    }
+                    return parsed;
+                }
+                if (type === 'boolean') {
+                    const lower = rawValue.trim().toLowerCase();
+                    if (lower === 'true') return true;
+                    if (lower === 'false') return false;
+                    throw new Error('布尔字段请填写 true 或 false');
+                }
+                if (type === 'null') {
+                    return null;
+                }
+                if (type === 'object' || type === 'array') {
+                    return JSON.parse(rawValue);
+                }
+                return rawValue;
+            }
 
-                    const propertiesContainer = document.createElement('div');
-                    propertiesContainer.className = 'properties-container';
-                    editorSection[prompt]['mainContainer'].appendChild(propertiesContainer);
+            function setValueByPath(obj, path, value) {
+                let target = obj;
+                for (let i = 0; i < path.length - 1; i++) {
+                    target = target[path[i]];
+                }
+                target[path[path.length - 1]] = value;
+            }
 
-                    editorSection[prompt].propertyLabels = {};
-                    editorSection[prompt].propertyInputs = {};
-                    Object.keys(saveObj.data.prompts[prompt].data).forEach(attr => {
-                        if (typeof saveObj.data.prompts[prompt].data[attr] !== 'string') {
-                            return;
-                        }
-                        // 创建属性编辑组
-                        const propertyGroup = document.createElement('div');
-                        propertyGroup.className = 'property-group';
-                        propertiesContainer.appendChild(propertyGroup);
+            function createEditorSection(sectionKey, sectionTitle, sourceObj, basePath) {
+                const option = document.createElement('option');
+                option.value = sectionKey;
+                option.textContent = sectionTitle;
+                personSelector.appendChild(option);
 
-                        const propertyInput = document.createElement('textarea');
-                        editorSection[prompt].propertyInputs[attr] = propertyInput;
-                        propertyInput.className = 'property-input';
-                        propertyInput.id = `${prompt}-${attr}`;
-                        propertyInput.value = saveObj.data.prompts[prompt].data[attr];
-                        
-                        editorSection[prompt].propertyLabels[attr] = document.createElement('label');
-                        editorSection[prompt].propertyLabels[attr].className = 'property-label';
-                        editorSection[prompt].propertyLabels[attr].htmlFor = propertyInput.id;
-                        editorSection[prompt].propertyLabels[attr].textContent = translation.get(attr) || attr;
+                editorSection[sectionKey] = {
+                    propertyInputs: {},
+                    fieldMeta: {}
+                };
 
-                        propertyGroup.appendChild(editorSection[prompt].propertyLabels[attr]);
-                        propertyGroup.appendChild(propertyInput);
-                    });
+                const mainContainer = document.createElement('div');
+                mainContainer.className = 'editor-section';
+                mainContainer.style.display = 'none';
+                editorSection[sectionKey].mainContainer = mainContainer;
+                editorSections.appendChild(mainContainer);
+
+                const sectionHeading = document.createElement('div');
+                sectionHeading.className = 'section-heading';
+                sectionHeading.textContent = sectionTitle;
+                mainContainer.appendChild(sectionHeading);
+
+                const propertiesContainer = document.createElement('div');
+                propertiesContainer.className = 'properties-container';
+                mainContainer.appendChild(propertiesContainer);
+
+                Object.keys(sourceObj).forEach(attr => {
+                    const propertyGroup = document.createElement('div');
+                    propertyGroup.className = 'property-group';
+                    propertiesContainer.appendChild(propertyGroup);
+
+                    const propertyInput = document.createElement('textarea');
+                    propertyInput.className = 'property-input';
+                    propertyInput.id = `${sectionKey}-${attr}`;
+
+                    const originalValue = sourceObj[attr];
+                    const valueType = getType(originalValue);
+                    propertyInput.value = valueType === 'object' || valueType === 'array'
+                        ? JSON.stringify(originalValue, null, 2)
+                        : String(originalValue ?? '');
+
+                    const propertyLabel = document.createElement('label');
+                    propertyLabel.className = 'property-label';
+                    propertyLabel.htmlFor = propertyInput.id;
+                    propertyLabel.textContent = `${translation.get(attr) || attr} (${valueType})`;
+
+                    propertyGroup.appendChild(propertyLabel);
+                    propertyGroup.appendChild(propertyInput);
+
+                    editorSection[sectionKey].propertyInputs[attr] = propertyInput;
+                    editorSection[sectionKey].fieldMeta[attr] = {
+                        path: [...basePath, attr],
+                        type: valueType
+                    };
                 });
             }
 
-            // 文件选择事件
+            function populateSelectorsAndEditors(targetSaveObj) {
+                clearEditorState();
+
+                const prompts = targetSaveObj?.data?.prompts;
+                if (prompts && typeof prompts === 'object') {
+                    Object.keys(prompts).forEach(promptKey => {
+                        const promptData = prompts[promptKey]?.data;
+                        if (promptData && typeof promptData === 'object') {
+                            createEditorSection(
+                                `prompt:${promptKey}`,
+                                translation.get(promptKey) || promptKey,
+                                promptData,
+                                ['data', 'prompts', promptKey, 'data']
+                            );
+                        }
+                    });
+                }
+
+                const diaryList = targetSaveObj?.data?.diary;
+                if (Array.isArray(diaryList)) {
+                    diaryList.forEach((entry, index) => {
+                        if (!entry || typeof entry !== 'object') return;
+                        const diaryTitle = entry.date ? `日记 #${index + 1} (${entry.date})` : `日记 #${index + 1}`;
+                        createEditorSection(
+                            `diary:${index}`,
+                            diaryTitle,
+                            entry,
+                            ['data', 'diary', index]
+                        );
+                    });
+                }
+
+                selectorSection.style.display = Object.keys(editorSection).length > 0 ? 'block' : 'none';
+            }
+
             fileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
-                if (file) {
-                    fileNameDisplay.textContent = file.name;
+                if (!file) return;
 
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        // 读取文件后操作
-                        try {
-                            saveObj = JSON.parse(e.target.result);
-                            saveObj_original = JSON.parse(e.target.result);
-                            populatePersonSelector(saveObj);
-                            console.log(saveObj);
-                            const emptyState = document.getElementById('emptyState');
-                            emptyState.style.display = 'none';
-                            const saveButton = document.getElementById('saveButton');
-                            saveButton.disabled = false;
-                            const resetButton = document.getElementById('resetButton');
-                            resetButton.disabled = false;
-                            showStatusMessage('文件读取成功','success');
-                        } catch (error) {
-                            showStatusMessage('JSON文件格式错误: ' + error.message, 'error');
-                            console.error(error);
-                        }
+                fileNameDisplay.textContent = file.name;
+                const reader = new FileReader();
 
-                    };
+                reader.onload = (e) => {
+                    try {
+                        saveObj = JSON.parse(e.target.result);
+                        saveObjOriginal = JSON.parse(e.target.result);
+                        populateSelectorsAndEditors(saveObj);
 
-                    reader.onerror = function () {
-                        showStatusMessage('读取文件时出错', 'error');
-                    };
+                        emptyState.style.display = 'none';
+                        saveButton.disabled = false;
+                        resetButton.disabled = false;
+                        showStatusMessage('文件读取成功', 'success');
+                    } catch (error) {
+                        showStatusMessage('JSON文件格式错误: ' + error.message, 'error');
+                        console.error(error);
+                    }
+                };
 
-                    reader.readAsText(file);
-                }
+                reader.onerror = () => showStatusMessage('读取文件时出错', 'error');
+                reader.readAsText(file);
             });
 
-            // 选择人设事件
-            personSelector.addEventListener('change', (event) => {
-                const tempOption = document.getElementById('tempOption');
-                if (tempOption) {
-                    tempOption.remove();
-                }
-                console.log(personSelector.value);
-                for (let [key, value] of translation) {
-                    if (personSelector.value !== value) {
-                        continue;
-                    }
-                    for (const prompt in editorSection) {
-                        if (key === prompt) {
-                            editorSection[prompt]['mainContainer'].style.display = 'block';
-                        } else {
-                            editorSection[prompt]['mainContainer'].style.display = 'none';
-                        }
-                    }
-                    
-                }
+            personSelector.addEventListener('change', () => {
+                Object.keys(editorSection).forEach(key => {
+                    editorSection[key].mainContainer.style.display = key === personSelector.value ? 'block' : 'none';
+                });
             });
 
-            // 保存文件事件
-            const saveButton = document.getElementById('saveButton');
             saveButton.addEventListener('click', () => {
                 if (!saveObj) {
                     showStatusMessage('请先选择文件', 'error');
@@ -228,44 +284,51 @@
                 }
 
                 try {
-                    for (const prompt in editorSection) {
-                        for (const attr in editorSection[prompt].propertyInputs) {
-                            saveObj.data.prompts[prompt].data[attr] = editorSection[prompt].propertyInputs[attr].value;
-                        }
-                    }
+                    Object.keys(editorSection).forEach(sectionKey => {
+                        const section = editorSection[sectionKey];
+                        Object.keys(section.propertyInputs).forEach(attr => {
+                            const rawValue = section.propertyInputs[attr].value;
+                            const meta = section.fieldMeta[attr];
+                            const parsedValue = parseValue(rawValue, meta.type);
+                            setValueByPath(saveObj, meta.path, parsedValue);
+                        });
+                    });
 
                     const content = JSON.stringify(saveObj, null, 2);
-                    const blob = new Blob([content], { type: 'text/plain' });
+                    const blob = new Blob([content], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
-                    
                     const a = document.createElement('a');
                     a.href = url;
-                    
-                    // 生成新文件名：原文件名 + "_edited"
+
                     const originalName = fileNameDisplay.textContent;
                     const dotIndex = originalName.lastIndexOf('.');
-                    let newName;
-                    
-                    if (dotIndex > 0) {
-                        newName = originalName.substring(0, dotIndex) + '_edited' + originalName.substring(dotIndex);
-                    } else {
-                        newName = originalName + '_edited';
-                    }
-                    
+                    const newName = dotIndex > 0
+                        ? originalName.substring(0, dotIndex) + '_edited' + originalName.substring(dotIndex)
+                        : originalName + '_edited';
+
                     a.download = newName;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    
+
                     showStatusMessage('文件保存成功！', 'success');
                 } catch (error) {
                     showStatusMessage('保存文件时出错: ' + error.message, 'error');
                 }
             });
 
+            resetButton.addEventListener('click', () => {
+                if (!saveObjOriginal) {
+                    showStatusMessage('请先选择文件', 'error');
+                    return;
+                }
 
-
+                saveObj = JSON.parse(JSON.stringify(saveObjOriginal));
+                populateSelectorsAndEditors(saveObj);
+                personSelector.value = '';
+                showStatusMessage('内容已重置为原始文件', 'success');
+            });
         });
     </script>
 </body>
