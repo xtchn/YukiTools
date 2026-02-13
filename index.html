@@ -5,7 +5,349 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON人物属性编辑器</title>
-    <link rel="stylesheet" type="text/css" href="main.css">
+    <style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+header {
+    background: #2c3e50;
+    color: white;
+    padding: 25px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.description {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.main-content {
+    padding: 25px;
+}
+
+.file-input-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px dashed #dee2e6;
+}
+
+.file-input-label {
+    display: inline-block;
+    padding: 12px 25px;
+    background-color: #3498db;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+    margin-bottom: 10px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.file-input-label:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#fileInput {
+    display: none;
+}
+
+.file-name {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.selector-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.selector-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.person-selector {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    font-size: 1rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.person-selector:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.editor-section {
+    margin-bottom: 25px;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.section-heading {
+    background: #3498db;
+    color: white;
+    padding: 15px 20px;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.properties-container {
+    padding: 20px;
+}
+
+.property-group {
+    margin-bottom: 20px;
+}
+
+.property-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.property-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: border-color 0.3s;
+}
+
+.property-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+textarea.property-input {
+    min-height: 180px;
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+}
+
+.button-section {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+button {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+    min-width: 140px;
+}
+
+#saveButton {
+    background-color: #2ecc71;
+    color: white;
+    box-shadow: 0 2px 5px rgba(46, 204, 113, 0.3);
+}
+
+#saveButton:hover:not(:disabled) {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4);
+}
+
+#resetButton {
+    background-color: #e74c3c;
+    color: white;
+    box-shadow: 0 2px 5px rgba(231, 76, 60, 0.3);
+}
+
+#resetButton:hover {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
+}
+
+button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.status-message {
+    text-align: center;
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    display: none;
+    font-weight: 500;
+}
+
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        border-radius: 8px;
+    }
+
+    header {
+        padding: 20px 15px;
+    }
+
+    h1 {
+        font-size: 1.6rem;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .button-section {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+    }
+}
+
+@media (min-width: 992px) {
+    .properties-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+}
+
+.diary-actions {
+    display: flex;
+    gap: 10px;
+    margin: -10px 0 20px;
+    flex-wrap: wrap;
+}
+
+#addDiaryButton {
+    background-color: #8e44ad;
+    color: #fff;
+}
+
+#addDiaryButton:hover:not(:disabled) {
+    background-color: #7d3c98;
+}
+
+#deleteDiaryButton {
+    background-color: #d35400;
+    color: #fff;
+}
+
+#deleteDiaryButton:hover:not(:disabled) {
+    background-color: #ba4a00;
+}
+
+.property-input-large {
+    min-height: 260px;
+}
+
+
+@media (max-width: 768px) {
+    .diary-actions {
+        flex-direction: column;
+    }
+
+    .diary-actions button,
+    .button-section button {
+        width: 100%;
+    }
+
+    textarea.property-input {
+        min-height: 240px;
+    }
+
+    .property-input-large {
+        min-height: 320px;
+    }
+}
+
+    </style>
 </head>
 
 <body>
@@ -23,10 +365,15 @@
             <input type="file" id="fileInput" accept="application/json">
 
             <div class="selector-section" id="selectorSection" style="display: none;">
-                <label for="personSelector" class="selector-label">选择人设：</label>
+                <label for="personSelector" class="selector-label">选择编辑分区：</label>
                 <select id="personSelector" class="person-selector">
-                    <option value="">-- 请选择一个人设 --</option>
+                    <option value="">-- 请选择一个分区 --</option>
                 </select>
+            </div>
+
+            <div class="diary-actions" id="diaryActions" style="display: none;">
+                <button id="addDiaryButton" type="button">新增日记</button>
+                <button id="deleteDiaryButton" type="button" disabled>删除当前日记</button>
             </div>
 
             <div id="editorContainer">
@@ -56,7 +403,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // 常量部分
             const translation = new Map([
                 ['sister-dilei', '地雷妹'],
                 ['sister-high', '高好感度(70+)'],
@@ -64,7 +410,13 @@
                 ['sister-medium', '普通好感度(30~70)'],
                 ['sister-null', '病娇'],
                 ['sister-verylow', '毒舌'],
-
+                ['playerInfo', '玩家信息'],
+                ['characterStats', '角色数值'],
+                ['stats', '信赖/好感数值'],
+                ['playerProgress', '玩家进度'],
+                ['timeSystem', '时间系统'],
+                ['settings', '游戏设置'],
+                ['globalLevelSystem', '全局等级'],
                 ['name', '姓名'],
                 ['description', '描述'],
                 ['personality', '性格'],
@@ -72,155 +424,306 @@
                 ['mes_example', '对话示例'],
                 ['scenario', '场景'],
                 ['creator_notes', '创作者备注'],
-                ['tags', '标签']
+                ['tags', '标签'],
+                ['timestamp', '时间戳'],
+                ['date', '日期'],
+                ['time', '时间'],
+                ['affection', '好感'],
+                ['trust', '信赖'],
+                ['content', '内容'],
+                ['mode', '模式']
             ]);
-            const fileInput = document.getElementById('fileInput');             // 文件输入元素
-            const fileNameDisplay = document.getElementById('fileName');       // 文件名显示元素
-            const personSelector = document.getElementById('personSelector');   // 人设选择器
-            const editorSections = document.getElementById('editorSections');   // 编辑区域容器
-            const editorSection = {};   // 编辑区域元素组
 
-            let saveObj = null;   // 存档对象
-            let saveObj_original = null; // 原始存档对象备份
+            const fileInput = document.getElementById('fileInput');
+            const fileNameDisplay = document.getElementById('fileName');
+            const personSelector = document.getElementById('personSelector');
+            const editorSections = document.getElementById('editorSections');
+            const selectorSection = document.getElementById('selectorSection');
+            const diaryActions = document.getElementById('diaryActions');
+            const addDiaryButton = document.getElementById('addDiaryButton');
+            const deleteDiaryButton = document.getElementById('deleteDiaryButton');
+            const emptyState = document.getElementById('emptyState');
+            const saveButton = document.getElementById('saveButton');
+            const resetButton = document.getElementById('resetButton');
 
-            // 显示状态消息
+            const editorSection = {};
+            let saveObj = null;
+            let saveObjOriginal = null;
+
             function showStatusMessage(message, type) {
                 const statusMessage = document.getElementById('statusMessage');
                 statusMessage.textContent = message;
                 statusMessage.className = 'status-message ' + type;
                 statusMessage.style.display = 'block';
-
-                // 3秒后自动隐藏成功消息
                 if (type === 'success') {
-                    setTimeout(hideStatusMessage, 3000);
+                    setTimeout(() => {
+                        statusMessage.style.display = 'none';
+                    }, 3000);
                 }
             }
 
-            // 隐藏状态消息
-            function hideStatusMessage() {
-                const statusMessage = document.getElementById('statusMessage');
-                statusMessage.style.display = 'none';
+            function clearEditorState() {
+                Object.keys(editorSection).forEach(key => delete editorSection[key]);
+                editorSections.innerHTML = '';
+                personSelector.innerHTML = '<option value="">-- 请选择一个分区 --</option>';
+                selectorSection.style.display = 'none';
+                diaryActions.style.display = 'none';
+                deleteDiaryButton.disabled = true;
             }
 
-            // 填充下拉框选择器
-            const populatePersonSelector = (saveObj) => {
-                const personSelector = document.getElementById('personSelector');
-                const selectorSection = document.getElementById('selectorSection');
-                // 清空选择器
-                personSelector.innerHTML = '<option id="tempOption" value="">-- 请选择一个人设进行编辑 --</option>';
+            function getType(value) {
+                if (Array.isArray(value)) return 'array';
+                if (value === null) return 'null';
+                return typeof value;
+            }
 
-                // 添加选项及编辑列表
-                Object.keys(saveObj.data.prompts).forEach(prompt => {
-                    // 创建添加选项
-                    const option = document.createElement('option');
-                    option.value = translation.get(prompt) || prompt;
-                    option.textContent = option.value;
-                    personSelector.appendChild(option);
-                    selectorSection.style.display = 'block';
-                    // 创建添加编辑区域组容器(先隐藏)
-                    editorSection[prompt] = {};
-                    editorSection[prompt]['mainContainer'] = document.createElement('div');
-                    editorSection[prompt]['mainContainer'].className = 'editor-section';
-                    editorSection[prompt]['mainContainer'].style.display = 'none';
-                    editorSections.appendChild(editorSection[prompt]['mainContainer']);
+            function parseValue(rawValue, type) {
+                if (type === 'number') {
+                    const parsed = Number(rawValue);
+                    if (Number.isNaN(parsed)) throw new Error('数字字段填写无效: ' + rawValue);
+                    return parsed;
+                }
+                if (type === 'boolean') {
+                    const lower = rawValue.trim().toLowerCase();
+                    if (lower === 'true') return true;
+                    if (lower === 'false') return false;
+                    throw new Error('布尔字段请填写 true 或 false');
+                }
+                if (type === 'null') {
+                    return rawValue.trim().toLowerCase() === 'null' || rawValue.trim() === '' ? null : rawValue;
+                }
+                if (type === 'object' || type === 'array') {
+                    return JSON.parse(rawValue);
+                }
+                return rawValue;
+            }
 
-                    const sectionHeading = document.createElement('div');
-                    sectionHeading.className = 'section-heading';
-                    sectionHeading.textContent = translation.get(prompt) || prompt;
-                    editorSection[prompt]['mainContainer'].appendChild(sectionHeading);
+            function setValueByPath(obj, path, value) {
+                let target = obj;
+                for (let i = 0; i < path.length - 1; i++) {
+                    target = target[path[i]];
+                }
+                target[path[path.length - 1]] = value;
+            }
 
-                    const propertiesContainer = document.createElement('div');
-                    propertiesContainer.className = 'properties-container';
-                    editorSection[prompt]['mainContainer'].appendChild(propertiesContainer);
+            function toTimeValue(entry) {
+                if (!entry || typeof entry !== 'object') return Number.MAX_SAFE_INTEGER;
+                const ts = entry.timestamp;
+                if (typeof ts === 'number' && Number.isFinite(ts)) return ts;
+                if (typeof ts === 'string') {
+                    const parsed = Date.parse(ts);
+                    if (!Number.isNaN(parsed)) return parsed;
+                }
+                const date = typeof entry.date === 'string' ? entry.date.replace(/\//g, '-') : '';
+                const time = typeof entry.time === 'string' ? entry.time : '';
+                if (date) {
+                    const parsed = Date.parse(`${date} ${time}`.trim());
+                    if (!Number.isNaN(parsed)) return parsed;
+                }
+                return Number.MAX_SAFE_INTEGER;
+            }
 
-                    editorSection[prompt].propertyLabels = {};
-                    editorSection[prompt].propertyInputs = {};
-                    Object.keys(saveObj.data.prompts[prompt].data).forEach(attr => {
-                        if (typeof saveObj.data.prompts[prompt].data[attr] !== 'string') {
-                            return;
-                        }
-                        // 创建属性编辑组
-                        const propertyGroup = document.createElement('div');
-                        propertyGroup.className = 'property-group';
-                        propertiesContainer.appendChild(propertyGroup);
+            function sortDiaryByTime() {
+                const diaryList = saveObj?.data?.diary;
+                if (!Array.isArray(diaryList)) return;
+                diaryList.sort((a, b) => toTimeValue(a) - toTimeValue(b));
+            }
 
-                        const propertyInput = document.createElement('textarea');
-                        editorSection[prompt].propertyInputs[attr] = propertyInput;
-                        propertyInput.className = 'property-input';
-                        propertyInput.id = `${prompt}-${attr}`;
-                        propertyInput.value = saveObj.data.prompts[prompt].data[attr];
-                        
-                        editorSection[prompt].propertyLabels[attr] = document.createElement('label');
-                        editorSection[prompt].propertyLabels[attr].className = 'property-label';
-                        editorSection[prompt].propertyLabels[attr].htmlFor = propertyInput.id;
-                        editorSection[prompt].propertyLabels[attr].textContent = translation.get(attr) || attr;
+            function createEditorSection(sectionKey, sectionTitle, sourceObj, basePath) {
+                const option = document.createElement('option');
+                option.value = sectionKey;
+                option.textContent = sectionTitle;
+                personSelector.appendChild(option);
 
-                        propertyGroup.appendChild(editorSection[prompt].propertyLabels[attr]);
-                        propertyGroup.appendChild(propertyInput);
-                    });
+                editorSection[sectionKey] = { propertyInputs: {}, fieldMeta: {} };
+
+                const mainContainer = document.createElement('div');
+                mainContainer.className = 'editor-section';
+                mainContainer.style.display = 'none';
+                editorSection[sectionKey].mainContainer = mainContainer;
+                editorSections.appendChild(mainContainer);
+
+                const sectionHeading = document.createElement('div');
+                sectionHeading.className = 'section-heading';
+                sectionHeading.textContent = sectionTitle;
+                mainContainer.appendChild(sectionHeading);
+
+                const propertiesContainer = document.createElement('div');
+                propertiesContainer.className = 'properties-container';
+                mainContainer.appendChild(propertiesContainer);
+
+                Object.keys(sourceObj).forEach(attr => {
+                    const propertyGroup = document.createElement('div');
+                    propertyGroup.className = 'property-group';
+                    propertiesContainer.appendChild(propertyGroup);
+
+                    const propertyInput = document.createElement('textarea');
+                    propertyInput.className = 'property-input';
+                    propertyInput.id = `${sectionKey}-${attr}`;
+
+                    const originalValue = sourceObj[attr];
+                    const valueType = getType(originalValue);
+                    propertyInput.value = valueType === 'object' || valueType === 'array'
+                        ? JSON.stringify(originalValue, null, 2)
+                        : String(originalValue ?? '');
+                    if (attr === 'content') {
+                        propertyInput.classList.add('property-input-large');
+                    }
+
+                    const propertyLabel = document.createElement('label');
+                    propertyLabel.className = 'property-label';
+                    propertyLabel.htmlFor = propertyInput.id;
+                    propertyLabel.textContent = `${translation.get(attr) || attr} (${valueType})`;
+
+                    propertyGroup.appendChild(propertyLabel);
+                    propertyGroup.appendChild(propertyInput);
+
+                    editorSection[sectionKey].propertyInputs[attr] = propertyInput;
+                    editorSection[sectionKey].fieldMeta[attr] = { path: [...basePath, attr], type: valueType };
                 });
             }
 
-            // 文件选择事件
+            function addSectionGroupLabel(text) {
+                const groupLabel = document.createElement('option');
+                groupLabel.disabled = true;
+                groupLabel.textContent = `──────── ${text} ────────`;
+                personSelector.appendChild(groupLabel);
+            }
+
+            function createBaseSection(targetSaveObj) {
+                const gameData = targetSaveObj?.data?.gameData;
+                if (!gameData || typeof gameData !== 'object') return;
+
+                addSectionGroupLabel('基础参数');
+                const baseTargets = [
+                    { key: 'playerInfo', path: ['data', 'gameData', 'playerInfo'] },
+                    { key: 'characterStats', path: ['data', 'gameData', 'characterStats'] },
+                    { key: 'stats', path: ['data', 'gameData', 'characterSystemData', 'stats'] },
+                    { key: 'playerProgress', path: ['data', 'gameData', 'playerProgress'] },
+                    { key: 'globalLevelSystem', path: ['data', 'gameData', 'globalLevelSystem'] },
+                    { key: 'timeSystem', path: ['data', 'gameData', 'timeSystem'] },
+                    { key: 'settings', path: ['data', 'gameData', 'settings'] }
+                ];
+
+                baseTargets.forEach(item => {
+                    const sectionObj = item.path.reduce((acc, seg) => (acc ? acc[seg] : null), targetSaveObj);
+                    if (sectionObj && typeof sectionObj === 'object') {
+                        createEditorSection(`base:${item.key}`, translation.get(item.key) || item.key, sectionObj, item.path);
+                    }
+                });
+            }
+
+            function populateSelectorsAndEditors(targetSaveObj) {
+                clearEditorState();
+                createBaseSection(targetSaveObj);
+
+                const prompts = targetSaveObj?.data?.prompts;
+                if (prompts && typeof prompts === 'object') {
+                    addSectionGroupLabel('人设');
+                    Object.keys(prompts).forEach(promptKey => {
+                        const promptData = prompts[promptKey]?.data;
+                        if (promptData && typeof promptData === 'object') {
+                            createEditorSection(`prompt:${promptKey}`, translation.get(promptKey) || promptKey, promptData, ['data', 'prompts', promptKey, 'data']);
+                        }
+                    });
+                }
+
+                sortDiaryByTime();
+                const diaryList = targetSaveObj?.data?.diary;
+                if (Array.isArray(diaryList)) {
+                    addSectionGroupLabel('日记');
+                    diaryList.forEach((entry, index) => {
+                        if (!entry || typeof entry !== 'object') return;
+                        const diaryTitle = entry.date ? `日记 #${index + 1} (${entry.date} ${entry.time || ''})` : `日记 #${index + 1}`;
+                        createEditorSection(`diary:${index}`, diaryTitle, entry, ['data', 'diary', index]);
+                    });
+                }
+
+                const hasSections = Object.keys(editorSection).length > 0;
+                selectorSection.style.display = hasSections ? 'block' : 'none';
+                diaryActions.style.display = hasSections ? 'flex' : 'none';
+            }
+
+            function updateDiaryButtonState() {
+                deleteDiaryButton.disabled = !personSelector.value.startsWith('diary:');
+            }
+
             fileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
-                if (file) {
-                    fileNameDisplay.textContent = file.name;
+                if (!file) return;
 
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        // 读取文件后操作
-                        try {
-                            saveObj = JSON.parse(e.target.result);
-                            saveObj_original = JSON.parse(e.target.result);
-                            populatePersonSelector(saveObj);
-                            console.log(saveObj);
-                            const emptyState = document.getElementById('emptyState');
-                            emptyState.style.display = 'none';
-                            const saveButton = document.getElementById('saveButton');
-                            saveButton.disabled = false;
-                            const resetButton = document.getElementById('resetButton');
-                            resetButton.disabled = false;
-                            showStatusMessage('文件读取成功','success');
-                        } catch (error) {
-                            showStatusMessage('JSON文件格式错误: ' + error.message, 'error');
-                            console.error(error);
-                        }
-
-                    };
-
-                    reader.onerror = function () {
-                        showStatusMessage('读取文件时出错', 'error');
-                    };
-
-                    reader.readAsText(file);
-                }
+                fileNameDisplay.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        saveObj = JSON.parse(e.target.result);
+                        saveObjOriginal = JSON.parse(e.target.result);
+                        populateSelectorsAndEditors(saveObj);
+                        emptyState.style.display = 'none';
+                        saveButton.disabled = false;
+                        resetButton.disabled = false;
+                        showStatusMessage('文件读取成功', 'success');
+                    } catch (error) {
+                        showStatusMessage('JSON文件格式错误: ' + error.message, 'error');
+                    }
+                };
+                reader.onerror = () => showStatusMessage('读取文件时出错', 'error');
+                reader.readAsText(file);
             });
 
-            // 选择人设事件
-            personSelector.addEventListener('change', (event) => {
-                const tempOption = document.getElementById('tempOption');
-                if (tempOption) {
-                    tempOption.remove();
-                }
-                console.log(personSelector.value);
-                for (let [key, value] of translation) {
-                    if (personSelector.value !== value) {
-                        continue;
-                    }
-                    for (const prompt in editorSection) {
-                        if (key === prompt) {
-                            editorSection[prompt]['mainContainer'].style.display = 'block';
-                        } else {
-                            editorSection[prompt]['mainContainer'].style.display = 'none';
-                        }
-                    }
-                    
-                }
+            personSelector.addEventListener('change', () => {
+                Object.keys(editorSection).forEach(key => {
+                    editorSection[key].mainContainer.style.display = key === personSelector.value ? 'block' : 'none';
+                });
+                updateDiaryButtonState();
             });
 
-            // 保存文件事件
-            const saveButton = document.getElementById('saveButton');
+            addDiaryButton.addEventListener('click', () => {
+                if (!saveObj) {
+                    showStatusMessage('请先选择文件', 'error');
+                    return;
+                }
+
+                if (!Array.isArray(saveObj?.data?.diary)) {
+                    saveObj.data.diary = [];
+                }
+
+                const now = new Date();
+                const newDiary = {
+                    timestamp: now.toISOString(),
+                    date: `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`,
+                    time: now.toTimeString().slice(0, 8),
+                    affection: 0,
+                    content: '请输入日记内容',
+                    mode: 'Custom'
+                };
+                saveObj.data.diary.push(newDiary);
+                sortDiaryByTime();
+                populateSelectorsAndEditors(saveObj);
+                const newIndex = saveObj.data.diary.findIndex(item => item === newDiary);
+                personSelector.value = `diary:${newIndex}`;
+                personSelector.dispatchEvent(new Event('change'));
+                showStatusMessage('已新增日记', 'success');
+            });
+
+            deleteDiaryButton.addEventListener('click', () => {
+                if (!saveObj || !personSelector.value.startsWith('diary:')) {
+                    showStatusMessage('请先选择要删除的日记', 'error');
+                    return;
+                }
+                const index = Number(personSelector.value.split(':')[1]);
+                const diaryList = saveObj?.data?.diary;
+                if (!Array.isArray(diaryList) || Number.isNaN(index) || !diaryList[index]) {
+                    showStatusMessage('删除失败：未找到该日记', 'error');
+                    return;
+                }
+                diaryList.splice(index, 1);
+                sortDiaryByTime();
+                populateSelectorsAndEditors(saveObj);
+                personSelector.value = '';
+                showStatusMessage('已删除日记', 'success');
+            });
+
             saveButton.addEventListener('click', () => {
                 if (!saveObj) {
                     showStatusMessage('请先选择文件', 'error');
@@ -228,44 +731,52 @@
                 }
 
                 try {
-                    for (const prompt in editorSection) {
-                        for (const attr in editorSection[prompt].propertyInputs) {
-                            saveObj.data.prompts[prompt].data[attr] = editorSection[prompt].propertyInputs[attr].value;
-                        }
-                    }
+                    Object.keys(editorSection).forEach(sectionKey => {
+                        const section = editorSection[sectionKey];
+                        Object.keys(section.propertyInputs).forEach(attr => {
+                            const rawValue = section.propertyInputs[attr].value;
+                            const meta = section.fieldMeta[attr];
+                            const parsedValue = parseValue(rawValue, meta.type);
+                            setValueByPath(saveObj, meta.path, parsedValue);
+                        });
+                    });
+
+                    sortDiaryByTime();
 
                     const content = JSON.stringify(saveObj, null, 2);
-                    const blob = new Blob([content], { type: 'text/plain' });
+                    const blob = new Blob([content], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
-                    
                     const a = document.createElement('a');
                     a.href = url;
-                    
-                    // 生成新文件名：原文件名 + "_edited"
                     const originalName = fileNameDisplay.textContent;
                     const dotIndex = originalName.lastIndexOf('.');
-                    let newName;
-                    
-                    if (dotIndex > 0) {
-                        newName = originalName.substring(0, dotIndex) + '_edited' + originalName.substring(dotIndex);
-                    } else {
-                        newName = originalName + '_edited';
-                    }
-                    
+                    const newName = dotIndex > 0
+                        ? originalName.substring(0, dotIndex) + '_edited' + originalName.substring(dotIndex)
+                        : originalName + '_edited';
                     a.download = newName;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    
+
+                    populateSelectorsAndEditors(saveObj);
+                    personSelector.value = '';
                     showStatusMessage('文件保存成功！', 'success');
                 } catch (error) {
                     showStatusMessage('保存文件时出错: ' + error.message, 'error');
                 }
             });
 
-
-
+            resetButton.addEventListener('click', () => {
+                if (!saveObjOriginal) {
+                    showStatusMessage('请先选择文件', 'error');
+                    return;
+                }
+                saveObj = JSON.parse(JSON.stringify(saveObjOriginal));
+                populateSelectorsAndEditors(saveObj);
+                personSelector.value = '';
+                showStatusMessage('内容已重置为原始文件', 'success');
+            });
         });
     </script>
 </body>
