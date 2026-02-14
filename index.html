@@ -477,7 +477,13 @@ button:disabled {
                 return typeof value;
             }
 
-            function parseValue(rawValue, type) {
+            function parseValue(rawValue, type, parserMode) {
+                if (parserMode === 'stringArrayByLine') {
+                    return rawValue
+                        .split('\n')
+                        .map(item => item.trim())
+                        .filter(Boolean);
+                }
                 if (type === 'number') {
                     const parsed = Number(rawValue);
                     if (Number.isNaN(parsed)) throw new Error('数字字段填写无效: ' + rawValue);
@@ -504,6 +510,18 @@ button:disabled {
                     target = target[path[i]];
                 }
                 target[path[path.length - 1]] = value;
+            }
+
+            function syncInputsToSaveObj() {
+                Object.keys(editorSection).forEach(sectionKey => {
+                    const section = editorSection[sectionKey];
+                    Object.keys(section.propertyInputs).forEach(attr => {
+                        const rawValue = section.propertyInputs[attr].value;
+                        const meta = section.fieldMeta[attr];
+                        const parsedValue = parseValue(rawValue, meta.type, meta.parserMode);
+                        setValueByPath(saveObj, meta.path, parsedValue);
+                    });
+                });
             }
 
             function toTimeValue(entry) {
@@ -563,9 +581,18 @@ button:disabled {
 
                     const originalValue = sourceObj[attr];
                     const valueType = getType(originalValue);
-                    propertyInput.value = valueType === 'object' || valueType === 'array'
-                        ? JSON.stringify(originalValue, null, 2)
-                        : String(originalValue ?? '');
+                    let parserMode = 'default';
+
+                    if (attr === 'tags' && Array.isArray(originalValue) && originalValue.every(item => typeof item === 'string')) {
+                        parserMode = 'stringArrayByLine';
+                        propertyInput.value = originalValue.join('\n');
+                        propertyInput.placeholder = '每行一个标签，例如：\n女生\n校园\n妹妹';
+                    } else {
+                        propertyInput.value = valueType === 'object' || valueType === 'array'
+                            ? JSON.stringify(originalValue, null, 2)
+                            : String(originalValue ?? '');
+                    }
+
                     if (attr === 'content') {
                         propertyInput.classList.add('property-input-large');
                     }
@@ -573,13 +600,15 @@ button:disabled {
                     const propertyLabel = document.createElement('label');
                     propertyLabel.className = 'property-label';
                     propertyLabel.htmlFor = propertyInput.id;
-                    propertyLabel.textContent = `${translation.get(attr) || attr} (${valueType})`;
+                    propertyLabel.textContent = parserMode === 'stringArrayByLine'
+                        ? `${translation.get(attr) || attr} (每行一个)`
+                        : `${translation.get(attr) || attr} (${valueType})`;
 
                     propertyGroup.appendChild(propertyLabel);
                     propertyGroup.appendChild(propertyInput);
 
                     editorSection[sectionKey].propertyInputs[attr] = propertyInput;
-                    editorSection[sectionKey].fieldMeta[attr] = { path: [...basePath, attr], type: valueType };
+                    editorSection[sectionKey].fieldMeta[attr] = { path: [...basePath, attr], type: valueType, parserMode };
                 });
             }
 
@@ -684,26 +713,32 @@ button:disabled {
                     return;
                 }
 
-                if (!Array.isArray(saveObj?.data?.diary)) {
-                    saveObj.data.diary = [];
-                }
+                try {
+                    syncInputsToSaveObj();
 
-                const now = new Date();
-                const newDiary = {
-                    timestamp: now.toISOString(),
-                    date: `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`,
-                    time: now.toTimeString().slice(0, 8),
-                    affection: 0,
-                    content: '请输入日记内容',
-                    mode: 'Custom'
-                };
-                saveObj.data.diary.push(newDiary);
-                sortDiaryByTime();
-                populateSelectorsAndEditors(saveObj);
-                const newIndex = saveObj.data.diary.findIndex(item => item === newDiary);
-                personSelector.value = `diary:${newIndex}`;
-                personSelector.dispatchEvent(new Event('change'));
-                showStatusMessage('已新增日记', 'success');
+                    if (!Array.isArray(saveObj?.data?.diary)) {
+                        saveObj.data.diary = [];
+                    }
+
+                    const now = new Date();
+                    const newDiary = {
+                        timestamp: now.toISOString(),
+                        date: `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`,
+                        time: now.toTimeString().slice(0, 8),
+                        affection: 0,
+                        content: '请输入日记内容',
+                        mode: 'Custom'
+                    };
+                    saveObj.data.diary.push(newDiary);
+                    sortDiaryByTime();
+                    populateSelectorsAndEditors(saveObj);
+                    const newIndex = saveObj.data.diary.findIndex(item => item === newDiary);
+                    personSelector.value = `diary:${newIndex}`;
+                    personSelector.dispatchEvent(new Event('change'));
+                    showStatusMessage('已新增日记', 'success');
+                } catch (error) {
+                    showStatusMessage('新增日记前有未保存的无效字段: ' + error.message, 'error');
+                }
             });
 
             deleteDiaryButton.addEventListener('click', () => {
@@ -711,17 +746,24 @@ button:disabled {
                     showStatusMessage('请先选择要删除的日记', 'error');
                     return;
                 }
-                const index = Number(personSelector.value.split(':')[1]);
-                const diaryList = saveObj?.data?.diary;
-                if (!Array.isArray(diaryList) || Number.isNaN(index) || !diaryList[index]) {
-                    showStatusMessage('删除失败：未找到该日记', 'error');
-                    return;
+
+                try {
+                    syncInputsToSaveObj();
+
+                    const index = Number(personSelector.value.split(':')[1]);
+                    const diaryList = saveObj?.data?.diary;
+                    if (!Array.isArray(diaryList) || Number.isNaN(index) || !diaryList[index]) {
+                        showStatusMessage('删除失败：未找到该日记', 'error');
+                        return;
+                    }
+                    diaryList.splice(index, 1);
+                    sortDiaryByTime();
+                    populateSelectorsAndEditors(saveObj);
+                    personSelector.value = '';
+                    showStatusMessage('已删除日记', 'success');
+                } catch (error) {
+                    showStatusMessage('删除日记前有未保存的无效字段: ' + error.message, 'error');
                 }
-                diaryList.splice(index, 1);
-                sortDiaryByTime();
-                populateSelectorsAndEditors(saveObj);
-                personSelector.value = '';
-                showStatusMessage('已删除日记', 'success');
             });
 
             saveButton.addEventListener('click', () => {
@@ -731,15 +773,7 @@ button:disabled {
                 }
 
                 try {
-                    Object.keys(editorSection).forEach(sectionKey => {
-                        const section = editorSection[sectionKey];
-                        Object.keys(section.propertyInputs).forEach(attr => {
-                            const rawValue = section.propertyInputs[attr].value;
-                            const meta = section.fieldMeta[attr];
-                            const parsedValue = parseValue(rawValue, meta.type);
-                            setValueByPath(saveObj, meta.path, parsedValue);
-                        });
-                    });
+                    syncInputsToSaveObj();
 
                     sortDiaryByTime();
 
