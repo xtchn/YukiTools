@@ -683,6 +683,14 @@ button:disabled {
                 personSelector.appendChild(groupLabel);
             }
 
+            function focusFirstEditableSection() {
+                const options = Array.from(personSelector.options);
+                const firstEditable = options.find(opt => opt.value && !opt.disabled);
+                if (!firstEditable) return;
+                personSelector.value = firstEditable.value;
+                personSelector.dispatchEvent(new Event('change'));
+            }
+
             function createBaseSection(targetSaveObj) {
                 const gameData = targetSaveObj?.data?.gameData;
                 if (!gameData || typeof gameData !== 'object') return;
@@ -732,6 +740,12 @@ button:disabled {
                     });
                 }
 
+                const otherData = targetSaveObj?.data?.other;
+                if (otherData && typeof otherData === 'object') {
+                    addSectionGroupLabel('其他参数');
+                    createEditorSection('other:data', '其他参数', otherData, ['data', 'other']);
+                }
+
                 const hasSections = Object.keys(editorSection).length > 0;
                 selectorSection.style.display = hasSections ? 'block' : 'none';
                 diaryActions.style.display = hasSections ? 'flex' : 'none';
@@ -749,9 +763,11 @@ button:disabled {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        saveObj = JSON.parse(e.target.result);
-                        saveObjOriginal = JSON.parse(e.target.result);
+                        const text = String(e.target.result || '').replace(/^﻿/, '').trim();
+                        saveObj = JSON.parse(text);
+                        saveObjOriginal = JSON.parse(text);
                         populateSelectorsAndEditors(saveObj);
+                        focusFirstEditableSection();
                         emptyState.style.display = 'none';
                         saveButton.disabled = false;
                         resetButton.disabled = false;
@@ -796,6 +812,7 @@ button:disabled {
                     saveObj.data.diary.push(newDiary);
                     sortDiaryByTime();
                     populateSelectorsAndEditors(saveObj);
+                    focusFirstEditableSection();
                     const newIndex = saveObj.data.diary.findIndex(item => item === newDiary);
                     personSelector.value = `diary:${newIndex}`;
                     personSelector.dispatchEvent(new Event('change'));
@@ -823,7 +840,7 @@ button:disabled {
                     diaryList.splice(index, 1);
                     sortDiaryByTime();
                     populateSelectorsAndEditors(saveObj);
-                    personSelector.value = '';
+                    focusFirstEditableSection();
                     showStatusMessage('已删除日记', 'success');
                 } catch (error) {
                     showStatusMessage('删除日记前有未保存的无效字段: ' + error.message, 'error');
@@ -858,7 +875,7 @@ button:disabled {
                     URL.revokeObjectURL(url);
 
                     populateSelectorsAndEditors(saveObj);
-                    personSelector.value = '';
+                    focusFirstEditableSection();
                     showStatusMessage('文件保存成功！', 'success');
                 } catch (error) {
                     showStatusMessage('保存文件时出错: ' + error.message, 'error');
@@ -872,7 +889,7 @@ button:disabled {
                 }
                 saveObj = JSON.parse(JSON.stringify(saveObjOriginal));
                 populateSelectorsAndEditors(saveObj);
-                personSelector.value = '';
+                focusFirstEditableSection();
                 showStatusMessage('内容已重置为原始文件', 'success');
             });
         });
